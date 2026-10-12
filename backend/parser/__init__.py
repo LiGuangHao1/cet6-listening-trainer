@@ -6,10 +6,16 @@ from .ocr import extract_ocr_blocks
 def parse_pdf(data: bytes, filename: str | None = None) -> ListeningDocument:
     blocks = extract_blocks(data)
     extraction_method = "pdf-text"
-    if not blocks:
-        blocks = extract_ocr_blocks(data)
-        extraction_method = "ocr" if blocks else "pdf-text"
     items = parse_document(blocks)
+    # A PDF can contain selectable headers or Chinese notes while the English
+    # transcript itself is an image. Retry OCR whenever text-layer parsing
+    # produces no listening items, not only when the document is completely
+    # textless.
+    if not items:
+        ocr_blocks = extract_ocr_blocks(data)
+        ocr_items = parse_document(ocr_blocks) if ocr_blocks else []
+        if len(ocr_items) > len(items):
+            blocks, items, extraction_method = ocr_blocks, ocr_items, "ocr"
     for item in items:
         item.extraction_method = extraction_method
     warnings = []
