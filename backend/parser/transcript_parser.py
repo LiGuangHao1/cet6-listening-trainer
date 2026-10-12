@@ -6,11 +6,11 @@ from .layout_parser import classify_blocks
 from .sentence_parser import split_sentences
 
 MARKER = re.compile(r"^\s*\d+\s*-\s*([MW])\s*[:：]\s*(.*)$", re.I)
-HEADING = re.compile(r"^\s*(conversation|passage|recording)\s+(one|two|three|1|2|3)\b", re.I)
+HEADING = re.compile(r"^\s*(?:section\s+[abc]\s*[:.\-]?\s*)?(conversation|passage|recording)s?\s+(one|two|three|1|2|3|i|ii|iii|Ⅰ|Ⅱ|Ⅲ)\b", re.I)
 PART = re.compile(r"part\s+ii|section\s+[abc]", re.I)
 QUESTION_START = re.compile(r"^(?:q\s*\d+|\d+\s*[.)])\s*(.*)$", re.I)
 OPTION = re.compile(r"^[A-D][.)]\s+(.*)$", re.I)
-NUM = {"one": 1, "two": 2, "three": 3, "1": 1, "2": 2, "3": 3}
+NUM = {"one": 1, "two": 2, "three": 3, "1": 1, "2": 2, "3": 3, "i": 1, "ii": 2, "iii": 3, "Ⅰ": 1, "Ⅱ": 2, "Ⅲ": 3}
 
 
 def _section_for(kind: str, count: int) -> str:
@@ -25,7 +25,9 @@ def _clean_annotation_numbers(text: str) -> str:
 def _heading_parts(blocks: list[SourceBlock]):
     found = []
     for i, b in enumerate(blocks):
-        m = HEADING.match(b.text)
+        # Some textbook PDFs put the section label before the item title.
+        candidate = re.sub(r"\s+", " ", b.text.replace("：", ":").strip())
+        m = HEADING.match(candidate)
         if m:
             found.append((i, m.group(1).lower(), NUM[m.group(2).lower()], b))
     return found
